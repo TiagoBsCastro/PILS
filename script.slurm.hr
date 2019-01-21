@@ -1,0 +1,45 @@
+#!/bin/bash
+#SBATCH --nodes=40
+#SBATCH --ntasks-per-node=12           #Numero de tarefas por Nó (DO NOT CHANGE)
+#SBATCH -p cpu                         #Fila cpu_small, cpu_dev, cpu, mesca
+#SBATCH -J alice		       #Nome job
+#SBATCH --time=12:00:00                #Wall Clock
+#SBATCH --exclusive                    #Utilização exclusiva dos nós durante a execução do job
+#SBATCH --mail-user=castro@if.ufrj.br
+
+#Exibe os nós alocados para o Job
+echo $SLURM_JOB_NODELIST
+nodeset -e $SLURM_JOB_NODELIST
+
+cd $SLURM_SUBMIT_DIR
+
+#Definindo o LIBRARY_PATH e Carregando modulos
+module load python/2.7.12_bullxmpi_gnu
+module load gcc-6
+module load bullxmpi_gnu/bullxmpi_gnu-1.2.8.4
+module load fftw/3.3.5_bullxmpi-gnu
+module load gsl
+
+LD_LIBRARY_PATH=/scratch/lenssims/tiago.castro/lib/:$LD_LIBRARY_PATH
+
+#Configura o executavel
+EXEC=full-plc.py
+export NPLC=10
+
+for i in $(seq 0 $(($NPLC-1))); do
+    python $EXEC  ${i} 150 1024  1 0 0 &
+done
+wait
+
+#for pix in {256,512,1024,2048}; do
+#
+#    for i in {0..3}; do
+#        python $EXEC  ${i} 150 ${pix}  0 1 0 &
+#    done
+#    wait
+#
+#    for i in {0..3}; do
+#        python $EXEC  ${i} 150 ${pix}  0 0 1 &
+#    done
+#    wait
+#done
