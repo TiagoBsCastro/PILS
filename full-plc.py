@@ -282,7 +282,7 @@ if do_gamma:
 			kappa = np.zeros([npixels,npixels])
 
 		print("\n  Computing the effective convergence for sim = {}\n".format(n_plc),file=mpi_log)
-		d = kappa_dir[n_plc]
+		d = dir.replace("*",str(n_plc))+str(zs)+"_"+str(npixels)+"/"
 		for i,n in enumerate(kappa_files):
 
                         print("Reading Convergence map {}".format(d+n),file=mpi_log)
