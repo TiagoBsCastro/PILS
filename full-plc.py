@@ -13,9 +13,9 @@ import astropy.units as u
 
 if len(sys.argv) == 7:
 
-        n_plc=int(sys.argv[1])
-        box_size=float(sys.argv[2])
-        npixels=int(sys.argv[3])                 # Number of Pixels for Lensing Maps
+        n_plc = int(sys.argv[1])
+        box_size = float(sys.argv[2])
+        npixels = int(sys.argv[3])               # Number of Pixels for Lensing Maps
         do_pinocchio = int(sys.argv[4])          # Run Pinocchio
         do_wlmoka = int(sys.argv[5])             # Run wlmoka
         do_gamma = int(sys.argv[6])              # Run MapGetGamma
@@ -228,6 +228,9 @@ if do_wlmoka:
 					continue
 
 				else:
+
+                                        print(" !!CAUTION!! I am not inverting any axis!")                                     
+                                        continue
 
 					kappa_file=dir+"kappa_{0:.4f}.alice.plc_0.fits".format(zini_tab[i+p])
 					kappa,header=fits.getdata(kappa_file,header=True)
