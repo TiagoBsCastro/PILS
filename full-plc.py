@@ -42,13 +42,13 @@ zlast_PLC = 5.0               # PLC's depth (should be less or equal to highest 
 zsource = [1.0,2.0,3.0,5.0]   # Source redshift
 fov = 1.0                     # Angular aperture of the FOV
 resolution = 'hr'             # Resolution for Pinocchios Run
-                              # mr:256**3 hr:512**3 uhr:1024**3
+                              # mr:64**3 hr:128**3 uhr:256**3
 
 #########################################################
 
-nodes = int(os.environ["SLURM_JOB_NUM_NODES"])/int(os.environ["NPLC"])   # Number of nodes to be used 
-ncores ={'mr':24*nodes, 'hr':12*nodes}[resolution]                       # Total number of cores to be used
-np.random.seed(np.abs(seed)*n_plc)                                       # Starting numpy random values
+nodes = 1                                                    # Number of nodes to be used
+ncores ={'mr':2, 'hr':2}[resolution]                         # Total number of cores to be used
+np.random.seed(np.abs(seed)*n_plc)                           # Starting numpy random values
 
 ################ Instatializing Cosmo ###################
 # !!!!!! It should match the PLC cosmo values !!!!!!!!! #
@@ -59,17 +59,17 @@ cosmo = FlatLambdaCDM(H0=100., Om0=Om0)
 ############### Pinocchio Params File and exe ################
 
 template_pin=Template(open("pinocchio_slave.ini").read())
-pin_exe="/scratch/lenssims/tiago.castro/Pinocchio-4.1.2/bin/pinocchio.x"
-npart = {'mr':256,'hr':512,'uhr':1024}[resolution]
+pin_exe="/home/tcastro/Pinocchio/bin/pinocchio.x"
+npart = {'mr':64,'hr':128,'uhr':256}[resolution]
 
 ############### WeakLMoka Params File and exe ################
 
 template_wl=Template(open("pinmoka_slave.ini").read())
-wl_exe="/scratch/lenssims/tiago.castro/PinMoka-light/bin/PinMoka.x"
+wl_exe="/home/tcastro/PinMoka-light/bin/PinMoka.x"
 
 ############### WeakLMoka Params File and exe ################
 
-gg_exe="/scratch/lenssims/tiago.castro/MapGetGamma/bin/MapGetGamma"
+gg_exe="/home/tcastro/MapGetGamma/bin/MapGetGamma.x"
 
 ##############################################################
 
@@ -110,7 +110,7 @@ while zlast<zlast_PLC:
 	if not do_pinocchio:
 
 		if os.path.isfile(dir+"pinocchio.{0:.4f}.alice.plc.out".format(zini)):
-	
+
 			plc_tab.append("pinocchio.{0:.4f}.alice.plc.out".format(zini))
 			zlast_tab.append(zlast)
 	       		zini_tab.append(zini)
@@ -150,7 +150,7 @@ while zlast<zlast_PLC:
 
 	log=open(dir+"log_{0:02d}_{1:.4f}.txt".format(n_plc,zini),"w")
 	err=open(dir+"err_{0:02d}_{1:.4f}.txt".format(n_plc,zini),"w")
-	returned_value=subprocess.call(["srun","--resv-ports","--nodes",str(nodes),"--ntasks={}".format(ncores),pin_exe,param_name], cwd=dir, stdout=log, stderr=err)
+	returned_value=subprocess.call(["mpirun","-n", "{}".format(ncores),pin_exe,param_name], cwd=dir, stdout=log, stderr=err)
 	log.close()
 	err.close()
 	subprocess.call(["mv","pinocchio.alice.plc.out","pinocchio.{0:.4f}.alice.plc.out".format(zini)],cwd=dir)
@@ -212,8 +212,8 @@ if do_wlmoka:
 
 				log.append(open(dir+"log_{0:02d}_{1:.4f}.txt".format(n_plc,zini_tab[i+p]),"w"))
 		                err.append(open(dir+"err_{0:02d}_{1:.4f}.txt".format(n_plc,zini_tab[i+p]),"w"))
-		                processes.append(subprocess.Popen(["srun","--resv-ports","--nodes","1","-n","1",wl_exe,param_name,"0"], cwd=dir, stdout=log[-1], stderr=err[-1]))
-	
+		                processes.append(subprocess.Popen(["mpirun","-n","1",wl_exe,param_name,"0"], cwd=dir, stdout=log[-1], stderr=err[-1]))
+
 			for p in range(nprocesses):
 
 				print( "Waiting subprocess {0:d} to finish".format(p),file=mpi_log)
@@ -282,7 +282,7 @@ if do_gamma:
 			kappa = np.zeros([npixels,npixels])
 
 		print("\n  Computing the effective convergence for sim = {}\n".format(n_plc),file=mpi_log)
-		d = kappa_dir[n_plc]
+		d = dir.replace("*",str(n_plc))+str(zs)+"_"+str(npixels)+"/"
 		for i,n in enumerate(kappa_files):
 
                         print("Reading Convergence map {}".format(d+n),file=mpi_log)
@@ -294,6 +294,6 @@ if do_gamma:
 	        fits.writeto(open(d+"/kappa.fits","wb"), kappa, header=header,overwrite=True)
 		kappa = np.zeros([npixels,npixels])
 
-        	subprocess.call(["srun","--resv-ports","--nodes=1","--ntasks=1",gg_exe,"kappa.fits"], cwd=d)
+        	subprocess.call(["mpirun","-n","1",gg_exe,"kappa.fits"], cwd=d)
 
 quit()
